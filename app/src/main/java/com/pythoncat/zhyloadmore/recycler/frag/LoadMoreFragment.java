@@ -16,18 +16,13 @@ import com.apkfuns.logutils.LogUtils;
 import com.pythoncat.zhyloadmore.R;
 import com.pythoncat.zhyloadmore.recycler.adapter.LoadAdapter;
 import com.pythoncat.zhyloadmore.recycler.domain.Bean;
-import com.pythoncat.zhyloadmore.recycler.service.Load;
+import com.pythoncat.zhyloadmore.recycler.service.LoadApi;
 import com.pythoncat.zhyloadmore.util.RxJavaUtil;
 import com.zhy.adapter.recyclerview.wrapper.LoadMoreWrapper;
 
 import java.util.ArrayList;
-import java.util.List;
 
-import rx.Observable;
-import rx.Subscriber;
 import rx.Subscription;
-import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -73,17 +68,21 @@ public class LoadMoreFragment extends Fragment {
         adapterWrapper.setOnLoadMoreListener(this::loadMore);
         rv.setAdapter(adapterWrapper);
         initShow();
-//        refresh();
+        refresh();
     }
 
     private void loadMore() {
         RxJavaUtil.close(loadMoreSubscript);
-        loadMoreSubscript = Load.timer3s().flatMap(t -> Observable.just(Load.loadMore()))
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
+        loadMoreSubscript = LoadApi.loadMoreApi()
                 .subscribe(data -> {
-                    if (data == null) showError();
-                    if (data.size() == 0) showEmpty();
+                    if (data == null) {
+                        showError();
+                        return;
+                    }
+                    if (data.size() == 0) {
+                        showEmpty();
+                        return;
+                    }
                     showData();
                     //  datas.clear();
                     datas.addAll(data);
@@ -94,6 +93,7 @@ public class LoadMoreFragment extends Fragment {
                     showError();
                 });
     }
+
 
     private void initShow() {
         showLoading();
@@ -128,40 +128,28 @@ public class LoadMoreFragment extends Fragment {
     }
 
     private void refresh() {
-        final Subscriber<List<Bean>> subscriber = new Subscriber<List<Bean>>() {
-            @Override
-            public void onStart() {
-                super.onStart();
-                LogUtils.e("on start....");
-                showLoading();
-            }
-
-            @Override
-            public void onCompleted() {
-                sw.setRefreshing(false);
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                LogUtils.e(e);
-                showError();
-            }
-
-            @Override
-            public void onNext(List<Bean> data) {
-                if (data == null) showError();
-                if (data.size() == 0) showEmpty();
-                showData();
-                datas.clear();
-                datas.addAll(data);
-                LogUtils.e("refreshing   data.size = " + datas.size());
-                adapterWrapper.notifyDataSetChanged();
-            }
-        };
+        LogUtils.e("on start....");
         RxJavaUtil.close(refreshSubscript);
-        refreshSubscript = Load.timer3s().flatMap(t -> Observable.just(Load.refresh()))
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(subscriber);
+        refreshSubscript = LoadApi.refreshApi()
+                .subscribe(data -> {
+                            if (data == null) {
+                                showError();
+                                return;
+                            }
+                            if (data.size() == 0) {
+                                showEmpty();
+                                return;
+                            }
+                            showData();
+                            datas.clear();
+                            datas.addAll(data);
+                            LogUtils.e("refreshing   data.size = " + datas.size());
+                            adapterWrapper.notifyDataSetChanged();
+                        },
+                        e -> {
+                            LogUtils.e(e);
+                            showError();
+                        },
+                        () -> sw.setRefreshing(false));
     }
 }

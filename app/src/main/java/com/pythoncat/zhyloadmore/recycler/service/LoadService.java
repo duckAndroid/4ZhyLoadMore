@@ -15,7 +15,7 @@ import rx.Observable;
 /**
  * Created by pythonCat on 2016/7/8.
  */
-public class Load {
+public class LoadService {
 
     /**
      * 初次获取数据
@@ -99,7 +99,7 @@ public class Load {
     }
 
     public static Observable<Long> timer(long delay, TimeUnit unit) {
-        return Observable.timer(3000, TimeUnit.MILLISECONDS);
+        return Observable.timer(delay, unit);
     }
 
     public static Observable<Long> timer3s() {
